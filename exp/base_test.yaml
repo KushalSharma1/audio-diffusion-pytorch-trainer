@@ -68,6 +68,7 @@ callbacks:
     verbose: False
     dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
+    save_on_train_epoch_end: True
 
   model_summary:
     _target_: pytorch_lightning.callbacks.RichModelSummary
