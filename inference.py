@@ -1,10 +1,12 @@
 import torch 
 from main.module_base import Model
-from audio_diffusion_pytorch import AudioDiffusionModel, UniformDistribution, LinearSchedule, KarrasSchedule, VSampler
+# from audio_diffusion_pytorch import AudioDiffusionModel, UniformDistribution, LinearSchedule, KarrasSchedule, VSampler
+# from audio_diffusion_pytorch import LinearSchedule, VSampler
+from audio_diffusion_pytorch import KarrasSchedule, AEulerSampler
 import torchaudio
 import math 
 
-adm = AudioDiffusionModel(
+"""adm = AudioDiffusionModel(
     in_channels=2,
     channels=128,
     # patch_factor=16,
@@ -22,13 +24,18 @@ adm = AudioDiffusionModel(
     use_skip_scale=True,
     # use_magnitude_channels=True,
     diffusion_sigma_distribution=UniformDistribution
-)
-
-adm = adm.to('mps')
+)"""
+if torch.cuda.is_available():
+    device = "cuda"
+elif torch.backends.mps.is_available():
+    device = "mps"
+else:
+    device = "cpu"
+print(f"Using device {device}")
 version = "1136_720k" #@param ["1136_718k", "1136_720k"]
-model = torch.hub.load_state_dict_from_url(f'https://huggingface.co/archinetai/audio-diffusion-pytorch/resolve/main/audio_{version}.pt', map_location='mps')
-import pdb; pdb.set_trace()
-model_path = "logs/ckpts/2022-12-20-00-45-45/epoch=37-valid_loss=0.053.ckpt"
+model = torch.hub.load_state_dict_from_url(f'https://huggingface.co/archinetai/audio-diffusion-pytorch/resolve/main/audio_{version}.pt', map_location=device)
+
+"""model_path = "logs/ckpts/2022-12-20-00-45-45/epoch=37-valid_loss=0.053.ckpt"
 model = Model.load_from_checkpoint(
     checkpoint_path=model_path,
     lr=1e-4,
@@ -39,7 +46,7 @@ model = Model.load_from_checkpoint(
     ema_beta=0.9999,
     ema_power=0.7,
     model=adm
-)
+)"""
 
 
 sampling_rate = 48000
@@ -57,11 +64,15 @@ num_steps = 100 #@param {type: "slider", min: 1, max: 200, step: 1}
     rho=7.0
 ),"""
 with torch.no_grad():
-    samples = adm.sample(
-        noise=torch.randn((num_samples, 2, 2 ** length_samples), device='mps'),
+    samples = model.sample(
+        noise=torch.randn((num_samples, 2, 2 ** length_samples), device=device),
         num_steps=num_steps,
-        sigma_schedule=LinearSchedule(),
-        sampler=VSampler(),
+        sigma_schedule=KarrasSchedule(
+            sigma_min=1e-4, 
+            sigma_max=10.0,
+            rho=7.0
+        ),
+        sampler=AEulerSampler(),
     )
 
 # Log audio samples 
