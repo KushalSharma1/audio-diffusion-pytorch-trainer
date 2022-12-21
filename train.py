@@ -2,9 +2,11 @@ import os
 
 import dotenv
 import hydra
+import torch
 import pytorch_lightning as pl
 from main import utils
 from omegaconf import DictConfig, open_dict
+from main.module_base import Model
 
 # Load environment variables from `.env`.
 dotenv.load_dotenv(override=True)
@@ -79,9 +81,17 @@ def main(config: DictConfig) -> None:
 
     # Train with checkpoint if present, otherwise from start
     if "ckpt" in config:
+        #
         ckpt = config.get("ckpt")
+
         log.info(f"Starting training from {ckpt}")
-        trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt)
+        
+        if "huggingface" in ckpt:
+            ckpt_model = torch.hub.load_state_dict_from_url(ckpt, map_location='cpu')
+            model.model.load_state_dict(ckpt_model.state_dict())
+            trainer.fit(model=model, datamodule=datamodule)
+        else:
+            trainer.fit(model=model, datamodule=datamodule, ckpt_path=ckpt)
     else:
         log.info("Starting training.")
         trainer.fit(model=model, datamodule=datamodule)
