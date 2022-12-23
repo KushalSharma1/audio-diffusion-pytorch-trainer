@@ -42,7 +42,7 @@ datamodule:
   dataset:
     _target_: audio_data_pytorch.YoutubeDataset
     urls:
-      - https://www.youtube.com/watch?v=_dEw2zQ7xcE # 1h GHØSTS
+      - https://www.youtube.com/watch?v=wRDAFffv_iM
     root: ${data_dir}
     crop_length: 12 # seconds crops
     transforms:
@@ -56,7 +56,7 @@ datamodule:
   num_workers: 8
   pin_memory: True
 
-ckpt: 'https://huggingface.co/archinetai/audio-diffusion-pytorch/resolve/main/audio_1136_720k.pt'
+# ckpt: 'https://huggingface.co/archinetai/audio-diffusion-pytorch/resolve/main/audio_1136_720k.pt'
 
 callbacks:
   rich_progress_bar:
@@ -104,12 +104,12 @@ loggers:
 
 trainer:
   _target_: pytorch_lightning.Trainer
-  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  gpus: -1 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
   precision: 32 # Precision used for tensors, default `32`
-  accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
+  accelerator: cuda # `ddp` GPUs train individually and sync gradients, default `None`
   min_epochs: 0
-  max_epochs: -1
-  enable_model_summary: False
+  max_epochs: 4000
+  enable_model_summary: True
   log_every_n_steps: 1 # Logs metrics every N batches
   check_val_every_n_epoch: null
   val_check_interval: ${log_every_n_steps}
