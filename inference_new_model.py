@@ -1,8 +1,8 @@
 import torch 
 from main.module_base import Model
-from audio_diffusion_pytorch import AudioDiffusionModel, UniformDistribution, LinearSchedule, KarrasSchedule, VSampler
+#from audio_diffusion_pytorch import AudioDiffusionModel, UniformDistribution, LinearSchedule, KarrasSchedule, VSampler
 # from audio_diffusion_pytorch import LinearSchedule, VSampler
-from audio_diffusion_pytorch import KarrasSchedule, AEulerSampler, LogNormalDistribution
+from audio_diffusion_pytorch import AudioDiffusionModel, KarrasSchedule, AEulerSampler, LogNormalDistribution
 import torchaudio
 import math 
 
@@ -16,7 +16,7 @@ adm = AudioDiffusionModel(
     multipliers=[1, 2, 4, 4, 4, 4, 4],
     factors=[4, 4, 4, 2, 2, 2],
     num_blocks=[2, 2, 2, 2, 2, 2],
-    attentions=[0, 0, 0, 1, 1, 1, 1],
+    attentions=[0, 0, 0, 1, 1, 1],
     attention_heads=16,
     attention_features=64,
     attention_multiplier=2,
@@ -31,32 +31,46 @@ elif torch.backends.mps.is_available():
     device = "mps"
 else:
     device = "cpu"
+device = 'cpu'
 print(f"Using device {device}")
-model_path = "~/Downloads/2022-12-22-00-49-14/epoch=83-valid_loss=0.101.ckpt" #"logs/ckpts/2022-12-20-00-45-45/epoch=37-valid_loss=0.053.ckpt"
+adm = adm.to(device)
+model_path = "logs/2022-12-23-02-20-50/epoch=3599-valid_loss=0.018.ckpt" #"logs/ckpts/2022-12-20-00-45-45/epoch=37-valid_loss=0.053.ckpt"
 model = Model.load_from_checkpoint(
     checkpoint_path=model_path,
-    lr=1e-4,
-    lr_beta1=0.95,
-    lr_beta2=0.999,
-    lr_eps=1e-6,
-    lr_weight_decay=1e-3,
-    ema_beta=0.9999,
-    ema_power=0.7,
-    model=adm
-)
+    learning_rate=1e-4,
+    beta1=0.95,
+    beta2=0.999,
+    in_channels=2,
+    channels=256,
+    patch_factor=32,
+    patch_blocks=1,
+    resnet_groups=8,
+    kernel_multiplier_downsample=2,
+    multipliers=[1, 2, 4, 4, 4, 4, 4],
+    factors=[4, 4, 4, 2, 2, 2],
+    num_blocks=[2, 2, 2, 2, 2, 2],
+    attentions=[0, 0, 0, 1, 1, 1],
+    attention_heads=16,
+    attention_features=64,
+    attention_multiplier=2,
+    use_nearest_upsample=False,
+    use_skip_scale=True,
+    # use_magnitude_channels=True,
+    diffusion_sigma_distribution=LogNormalDistribution(-3, 1)
+).to(device)
 
 sampling_rate = 48000
 # @markdown Generation length in seconds (will be rounded to be a power of 2 of sample_rate*length)
 length = 10 #@param {type: "slider", min: 1, max: 87, step: 1}
 length_samples = math.ceil(math.log2(length * sampling_rate))
 # @markdown Number of samples to generate 
-num_samples = 5 #@param {type: "slider", min: 1, max: 16, step: 1}
+num_samples = 10 #@param {type: "slider", min: 1, max: 16, step: 1}
 # @markdown Number of diffusion steps (higher tends to be better but takes longer to generate)
-num_steps = 100 #@param {type: "slider", min: 1, max: 200, step: 1}
+num_steps = 500 #@param {type: "slider", min: 1, max: 200, step: 1}
 
-
+#import pdb; pdb.set_trace()
 with torch.no_grad():
-    samples = model.sample(
+    samples = model.model.sample(
         noise=torch.randn((num_samples, 2, 2 ** length_samples), device=device),
         num_steps=num_steps,
         sigma_schedule=KarrasSchedule(
